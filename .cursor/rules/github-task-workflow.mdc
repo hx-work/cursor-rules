@@ -9,7 +9,7 @@ alwaysApply: true
 
 ```yaml
 github:
-  owner: "HX-Work"
+  owner: "hx-work"
   repo: "cursor-rules"
   defaultBranch: "main"
   remote: "origin"
