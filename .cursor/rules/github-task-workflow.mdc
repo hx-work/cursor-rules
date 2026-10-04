@@ -1,0 +1,67 @@
+---
+description: 用日常口语联通 GitHub：建分支、提交、推送、开 PR，并可选同步 Linear
+alwaysApply: true
+---
+
+# GitHub 口语任务工作流
+
+## CONFIG（只改这里）
+
+```yaml
+github:
+  owner: "HX-Work"
+  repo: "cursor-rules"
+  defaultBranch: "main"
+  remote: "origin"
+# 与 Linear 联通（可选，留空则不做 Linear 同步）
+linear:
+  team: "NL2SQL"
+  linkIssues: true          # commit/PR 正文带 Linear ID，如 NL2-1
+# 行为开关
+options:
+  createPR: true            # 「提交并推送」后是否默认开 PR
+  draftPR: false
+  commitStyle: "conventional"  # conventional | plain
+```
+
+- 改 `owner` / `repo` / `defaultBranch` 即可切换项目
+- 当前目录须为该仓库的 git 工作区；`remote` 指向 GitHub
+
+## 前置检查（每次动手前）
+
+1. 有 `.git`；否则提示先 `git init` / clone，**不要擅自 init 到无关目录**。
+2. `git remote -v` 含 CONFIG 的 `remote`；没有则按 `https://github.com/{owner}/{repo}.git` 说明如何添加。
+3. 本机有 `gh` 且已登录（`gh auth status`）。未安装/未登录时：先告诉用户安装 [GitHub CLI](https://cli.github.com/) 并 `gh auth login`，可用的 git 步骤仍可做。
+4. 不提交密钥：`.env`、凭证、私钥等排除在外。
+
+## 何时触发
+
+| 用户说法 | 动作 |
+|---------|------|
+| 开始做 X / 切到登录分支 | 基于 `defaultBranch` 建/切分支（优先用 Linear 的 `gitBranchName`） |
+| 提交 / 帮我 commit | 看 status+diff+log → 暂存相关文件 → 写 commit message → **仅在用户明确要求时 commit** |
+| 推上去 / push | `git push -u {remote} HEAD`（需用户意图明确） |
+| 开 PR / 提 PR | `gh pr create`（base=`defaultBranch`；正文含摘要 + Linear 链接） |
+| 同步一下 / 提交并推送开 PR | 按序：commit（若有改动且已获准）→ push → 可选 PR |
+| 查 PR / 看看 CI | `gh pr view` / `gh pr checks` / `gh run list` 简报 |
+
+未明确说 push/PR 时，只整理说明，不推送、不开 PR。
+
+## 执行要点
+
+1. **分支**：有关联 Linear issue 时用其 `gitBranchName`；否则  
+   `{local}/{short-slug}` 或 `{TEAMKEY}-{n}-{slug}`（小写、短横线）。
+2. **Commit message**：
+   - `conventional`：`feat:` / `fix:` / `docs:` 等，一句说明 why
+   - `plain`：1–2 句中文/英文均可
+   - `linkIssues: true` 时在正文或尾部加 `Refs NL2-xx` / `Fixes NL2-xx`（仅用户说修完时用 Fixes）
+3. **PR**：title 简洁；body 用小结 + Test plan；base 为 `defaultBranch`；`draftPR` 为 true 时加 `--draft`。
+4. **Linear**（`linear.team` 非空且 `linkIssues`）：开 PR 或开始任务后，用 Linear MCP 在对应 issue 评论附上分支/PR 链接；用户说「开始做」时可把状态改为 `In Progress`（遵循 `linear-task-workflow` 规则）。
+5. **回复固定包含**：当前分支、remote、commit/PR 链接（若有）、下一步一句。
+
+## 约束
+
+- 只操作 CONFIG 中的 `owner/repo`（通过 remote URL 核对）。
+- 遵守用户 git 安全约定：不改 git config；不 force push main/master；未要求不 commit/push。
+- Windows 上 commit message 用 HEREDOC/`git commit -m` 的可靠写法，避免交互式 rebase。
+- 无 `gh` 时：仍可 commit/push；PR 改为给出 GitHub 网页比对链接。

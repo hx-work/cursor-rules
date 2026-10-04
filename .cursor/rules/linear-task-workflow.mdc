@@ -1,0 +1,80 @@
+---
+description: 口语管理 Linear 任务；Markdown phase 计划同步为 Todo
+alwaysApply: true
+---
+
+# Linear 口语任务工作流
+
+## CONFIG（只改这里）
+
+```yaml
+project:
+  name: "NL2SQL"
+  team: "NL2SQL"
+# 可选
+# defaultAssignee: "me"
+# planParentIssue: ""   # 非空时，各 phase 建为该 issue 的子任务
+# phaseTitleFormat: "[phase{n}] {title}"  # Linear issue 标题格式
+```
+
+- `project.name`：展示用项目名
+- `project.team`：Linear team 名或 key
+- 改配置后无需改下方流程
+
+## 何时触发
+
+| 用户说法 / 内容 | 动作 |
+|----------------|------|
+| 开始做 X / 做登录功能 | 找或建 issue → `In Progress` → 推荐分支 |
+| 暂停 / 先放着 | → `Todo` 或 `Backlog` |
+| 做完了 / 提测 | → `Done` + 评论摘要 |
+| 取消 / 不做了 | → `Canceled` |
+| 查一下 X 任务 | 查 issue，中文简报 |
+| 同步计划 / 发来含 phase 的 Markdown / @计划文件 | **按 phase 同步为 Linear Todo** |
+
+模糊时先确认对应 issue，不要猜错工单。
+
+## Markdown 计划 → Linear Todo
+
+识别用户消息或 `@` 文件中的阶段块，标题形态不限大小写，例如：
+
+```markdown
+## phase1 需求与接口设计
+- 列出登录 API
+- 定错误码
+
+## Phase 2：实现登录
+正文说明...
+
+### phase3 联调与验收
+```
+
+### 解析规则
+
+1. 匹配标题行：`phase` + 数字（如 `phase1`、`Phase 2`、`phase3：xxx`）。
+2. **标题** = CONFIG 的 `phaseTitleFormat`（默认 `[phase{n}] {title}`；无副标题则用 `[phase{n}]`）。
+3. **描述** = 该 phase 下到下一 phase 之前的 Markdown（列表/段落原样放入 issue description）。
+4. 每个 phase **一条** issue：`team` = CONFIG，`state` = `Todo`。
+5. 若配置了 `planParentIssue`：用 `parentId` 挂到父 issue；否则平铺在 team 下。
+6. **去重**：同 team 已存在相同标题的未完成 issue → 更新 description，不重复创建。
+7. 用户说「只同步 phase2」时只处理指定阶段。
+
+### 同步后回复
+
+用表格列出：phase | Linear ID | 链接 | 新建/更新；并提示可用「开始做 phase1」开工。
+
+## 口语任务步骤（Linear MCP：`plugin-linear-linear`）
+
+1. 读 CONFIG 的 `team` / `name`。
+2. `list_issues` 匹配；没有则 `save_issue` 新建。
+3. 按意图更新 `state`（以 `list_issue_statuses` 为准）。
+4. 开始任务：优先用 issue 的 `gitBranchName` 推荐分支。
+5. 回复含：issue 标识+链接、状态、推荐分支、下一步一句。
+
+## 约束
+
+- 只改 CONFIG 指定的 team。
+- 未要求时不 push、不强制 commit、不乱加 assignee。
+- 「开始做」优先复用已有 Todo/In Progress。
+- 同步计划默认只建/更新 **Todo**，不自动改成 In Progress。
+- 评论用简短中文说明触发来源与变更。
